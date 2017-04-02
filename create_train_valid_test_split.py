@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import argparse
-import os
-import csv
 from collections import Counter, defaultdict
+import csv
+import operator
+import os
 import random
 
 parser = argparse.ArgumentParser(description='Create a train/valid/test split for Magnatagatune.')
@@ -55,14 +56,28 @@ print(len(train_valid_test_examples))
 print(len(train_valid_test_keys))
 
 
+def get_mp3_stem(fname):
+    s = fname.split('-')
+    s = '-'.join(s[:-2])
+    return s
+
+
 def train_valid_test_split(keys, percent_train):
-    random.shuffle(keys)
-    number_train = int(len(keys) * percent_train)
+    key_paths = [paths[key] for key in keys]
+    stems = list(set([get_mp3_stem(fname) for fname in key_paths]))
+    random.shuffle(stems)
+    # Here, number_train includes validation data.
+    number_train = int(len(stems) * percent_train)
     number_valid = int(number_train / 10)
-    return (set(keys[number_valid:number_train]),
-            set(keys[:number_valid]),
-            set(keys[number_train:])
-           )
+    train_stems = set(stems[number_valid:number_train])
+    valid_stems = set(stems[:number_valid])
+    test_stems = set(stems[number_train:])
+    print('number_train: {}'.format(number_train))
+    print('stems : {}'.format(len(stems)))
+    train_keys = set(fname for fname in key_paths if get_mp3_stem(fname) in train_stems)
+    valid_keys = set(fname for fname in key_paths if get_mp3_stem(fname) in valid_stems)
+    test_keys = set(fname for fname in key_paths if get_mp3_stem(fname) in test_stems)
+    return train_keys, valid_keys, test_keys 
 
 
 def pairs2xy(pairs):
@@ -73,19 +88,19 @@ def pairs2xy(pairs):
     return Xl, yl
 
 train_keys, valid_keys, test_keys = train_valid_test_split(train_valid_test_keys,
-                                                          percent_train=0.9)
-train_examples = [ex for ex in train_valid_test_examples if ex[0] in train_keys]
-valid_examples = [ex for ex in train_valid_test_examples if ex[0] in valid_keys]
-test_examples = [ex for ex in train_valid_test_examples if ex[0] in test_keys]
+                                                           percent_train=0.9)
+train_examples = [ex for ex in train_valid_test_examples if paths[ex[0]] in train_keys]
+valid_examples = [ex for ex in train_valid_test_examples if paths[ex[0]] in valid_keys]
+test_examples = [ex for ex in train_valid_test_examples if paths[ex[0]] in test_keys]
 X_train, y_train = pairs2xy(train_examples)
 X_valid, y_valid = pairs2xy(valid_examples)
 X_test, y_test = pairs2xy(test_examples)
-print(len(train_keys))
-print(len(valid_keys))
-print(len(test_keys))
-print(len(train_examples))
-print(len(valid_examples))
-print(len(test_examples))
+print('train_keys: {}'.format(len(train_keys)))
+print('valid_keys: {}'.format(len(valid_keys)))
+print('test_keys: {}'.format(len(test_keys)))
+print('train_examples: {}'.format(len(train_examples)))
+print('valid_examples: {}'.format(len(valid_examples)))
+print('test_examples: {}'.format(len(test_examples)))
 
 # We save fname-tag examples for train, valid, test.
 # We also save the label_map of numerical value <-> tag name

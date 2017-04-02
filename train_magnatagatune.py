@@ -31,7 +31,7 @@ parser.add_argument('--dataset_dir',
 parser.add_argument('--audio_dir',
                     help='The directory containing Magnatagatune audio subdirectories.')
 parser.add_argument('--model_dir',
-                    help='The directory to save the model tox.')
+                    help='The directory to save the model to.')
 
 args = parser.parse_args()
 
